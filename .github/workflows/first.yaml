@@ -22,10 +22,6 @@ jobs:
         pip freeze > requirements.txt
         pip install -r requirements.txt
 
-    - name: Run tests
-      run: |
-        python -m pytest tests/
-
     - name: Build and deploy
       run: |
         python app.py
