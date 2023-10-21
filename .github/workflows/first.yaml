@@ -24,5 +24,9 @@ jobs:
 
     - name: Run tests
       run: |
+        python -m pytest tests/
+
+    - name: Build and deploy
+      run: |
         python app.py
 
