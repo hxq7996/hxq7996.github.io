@@ -1,0 +1,300 @@
+{% extends 'common.html' %}
+
+<!--页面主要内容-->
+{% block container %}
+<script src="static/js/clipboard.min.js"></script>
+<script src="static/js/index.js"></script>
+<link href="static/css/index.css" rel="stylesheet">
+
+
+<div>
+  <main class="lyear-layout-content">
+
+    <div class="container-fluid">
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card">
+            <div class="card-toolbar clearfix">
+              <div class="pull-right search-bar" method="get" action="#!" role="form">
+                <div class="input-group" class="pull-right search-bar">
+                  <input type="text" v-model="name" class="form-control" value="" name="keyword"
+                    placeholder="搜索+回车enter" @keyup.enter="search()">
+                </div>
+              </div>
+              <div class="toolbar-btn-action">
+                <a class="btn btn-primary m-r-5" href="#!" data-toggle="modal" data-target="#exampleModal"
+                  data-whatever="@mdo" @click="add"><i class="mdi mdi-plus"></i> 新增</a>
+                <!-- <a class="btn btn-success m-r-5" href="#!"><i class="mdi mdi-check"></i> 启用</a>
+                <a class="btn btn-warning m-r-5" href="#!"><i class="mdi mdi-block-helper"></i> 禁用</a> -->
+                <a class="btn btn-danger del_data" href="#!" @click="open"><i class="mdi mdi-window-close"></i> 删除</a>
+              </div>
+            </div>
+            <div class="card-body">
+
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                  <thead>
+                    <tr>
+                      <th>
+                        <label class="lyear-checkbox checkbox-primary">
+                          <input type="checkbox" id="check-all"><span></span>
+                        </label>
+                      </th>
+                      <th>编号</th>
+                      <th>URL</th>
+                      <th>人员</th>
+                      <th>跳链</th>
+                      <th>IP记录</th>
+                      <th>IP限制</th>
+                      <th>复制</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item,index) in page">
+                      <td>
+                        <label class="lyear-checkbox checkbox-primary">
+                          <input type="checkbox" name="ids" :value="item.id"><span></span>
+                        </label>
+                      </td>
+                      <td>{{((p_page-1)*p_size)+index+1}}</td>
+                      <td>{{'/GD/'+item.url}}</td>
+                      <td>{{item.username}}</td>
+                      <td>{{item.to_url}}</td>
+                      <td v-if="item.ipadd=='0'"><font  class="text-danger">关闭</font></td>
+                      <td  v-else><font  class="text-success">开启</font></td>
+                      <td v-if="item.hmd=='0'"><font  class="text-danger">关闭</font></td>
+                      <td  v-else><font  class="text-success">开启</font></td>
+                      <td><input type="button" value="点击复制" class="cpbtn btn-info"
+                          :data-clipboard-text="baseUrl+'/GD/'+item.url" onclick="this.value ='复制成功';">
+                      </td>
+                      <td>
+                        <div class="btn-group">
+                          <a class="btn btn-xs btn-default" href="#!" title="编辑" data-toggle="tooltip"
+                            @click="edit(index,item)"><i class="mdi mdi-pencil"></i></a>
+                          <a class="btn btn-xs btn-default" href="#!" title="删除" @click="open(item.id)"
+                            class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-sm"><i
+                              class="mdi mdi-window-close"></i></a>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="block">
+                <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
+                  :current-page.sync="p_page" :page-sizes="p_sizes" :page-size="p_size"
+                  layout="sizes, prev, pager, next" :total="p_total">
+                </el-pagination>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+  <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    v-show="dialogVisbile">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+              aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="exampleModalLabel">链接管理</h4>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <input type="text" v-model="data_form.to_url" class="form-control" name="to_url"
+              placeholder="跳链,***自动替换成工号,例https://test***.com" required v-model="data_form.to_url">
+          </div>
+          <div class="form-group" style="display: none;">
+            <input type="text" v-model="data_form.id" class="form-control" name="id" placeholder="ID号" required>
+          </div>
+          <div class="form-group">
+            <input type="text" class="form-control" name="url_1" placeholder="URL后缀1,表示个人标识" required
+              v-model="data_form.url1">
+          </div>
+          <div class="form-group">
+            <input type="text" class="form-control" name="url_2" placeholder="URL后缀2,表示链接标识" required
+              v-model="data_form.url2">
+          </div>
+          <div class="form-group">
+            <label class="lyear-checkbox checkbox-inline checkbox-primary">
+              <input type="checkbox" value="1" v-model="data_form.ipadd"><span>IP记录功能</span>
+            </label>
+            <label class="lyear-checkbox checkbox-inline checkbox-primary">
+              <input type="checkbox" value="1" v-model="data_form.hmd"><span>IP限制功能</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-primary" @click="save_data">提交</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  new Vue({
+    el: '#app',
+    data: {
+      visible: false,
+      menuV: false,
+      page: {}, //页面数据
+      p_page: 1, //当前页
+      p_sizes: [10, 100, 200], //页面尺寸选择
+      p_size: 10, //页面尺寸
+      p_total: 10, //数据总条数
+      name: '', //查询参数
+      dialogVisbile: false, //弹出层状态
+      data_form: { id: '', url1: '', url2: '', to_url: '', ipadd: false, hmd: false }, //表单数据
+      test: 111, //测试数据
+    },
+    mounted() {
+      this.loadTable(this.p_page, this.p_size, this.name)
+      this.loadmenu()
+    },
+    methods: {
+      loadmenu() {
+        axios({
+          method: 'post',
+          url: baseUrl + '/menuV',
+        })
+          .then((res) => {
+            this.menuV = res.data.menuV;
+          })
+      },
+      loadTable(pnum, psize, pname) {
+        axios({
+          method: 'post',
+          url: baseUrl + '/alink',
+          data: {
+            pnum: pnum,
+            psize: psize,
+            pname: pname
+          },
+        })
+          .then((res) => {
+            this.page = res.data.list;
+            this.p_total = res.data.total;
+          })
+      },
+      loadTable_update(row, act) {
+        axios({
+          method: 'post',
+          url: baseUrl + '/alink',
+          data: {
+            row: row,
+            act: act,
+          },
+        })
+          .then((res) => {
+            this.loadTable(this.p_page, this.p_size, this.name)
+            if (res.data > 0) {
+              this.$message({
+                type: 'success',
+                message: '操作成功!'
+              });
+            }
+            else { this.$message('数据冲突,操作失败'); }
+          })
+      },
+      search() {
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+      add() {
+        this.data_form = { url1: '', url2: '', to_url: '', ipadd: false, hmd: false }
+      },
+      edit(index, row) {
+        this.data_form.id = row['id']
+        var uuu = row['url'].split("/")
+        this.data_form.url1 = uuu[0]
+        this.data_form.url2 = uuu[1]
+        this.data_form.to_url = row['to_url']
+        if (row['ipadd'] === 1) { this.data_form.ipadd = true }
+        else { this.data_form.ipadd = false }
+        if (row['hmd'] === 1) { this.data_form.hmd = true }
+        else { this.data_form.hmd = false }
+        $('#exampleModal').modal('show');
+      },
+      del(del_id) {
+        this.data_form = { id: del_id, url1: '', url2: '', to_url: '1' }
+        this.loadTable_update(this.data_form, 'del');
+      },
+      open(ID) {
+        this.$confirm('此操作将永久删除, 是否继续?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          var cbox = getChkItemId("ids")
+          console.log(cbox)
+          if (typeof ID !== 'object' || cbox.length > 0) {
+            if (cbox.length > 0) { this.del(cbox) }
+            else { this.del(ID) }
+            getChkItemId("ids", 1)
+          }
+        })
+      },
+      save_data() {
+        if (this.data_form.id === undefined || this.data_form.id === '') {
+          if (this.data_form.to_url.length > 0 && this.data_form.url1.length > 0 && this.data_form.url2.length > 0) {
+
+            if (this.data_form.ipadd === true) { this.data_form.ipadd = 1 }
+            else { this.data_form.ipadd = 0 }
+            if (this.data_form.hmd === true) { this.data_form.hmd = 1 }
+            else { this.data_form.hmd = 0 }
+            this.loadTable_update(this.data_form, 'add');
+          }
+        }
+        else {
+          if (this.data_form.to_url.length > 0 && this.data_form.url1.length > 0 && this.data_form.url2.length > 0) { 
+            if (this.data_form.ipadd === true) { this.data_form.ipadd = 1 }
+            else { this.data_form.ipadd = 0 }
+            if (this.data_form.hmd === true) { this.data_form.hmd = 1 }
+            else { this.data_form.hmd = 0 }
+            this.loadTable_update(this.data_form, 'edit'); 
+          }
+        }
+        $('#exampleModal').modal('hide');
+      },
+      handleSizeChange(val) {
+        this.p_size = val;
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+      handleCurrentChange(val) {
+        console.log(val);
+        this.p_page = val;
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+    },
+  })
+
+  //点击复制
+  var clipboard = new ClipboardJS('.cpbtn');
+
+  function getChkItemId(chkItem, addcs) {
+    var chkItemArray = document.getElementsByName(chkItem);
+    var result = '';
+    for (var i = 0; i < chkItemArray.length; i++) {
+      if (addcs === 1) { chkItemArray[i].checked = false; }
+      if (chkItemArray[i].checked) {
+        if (result == '') {
+          result += chkItemArray[i].value;
+        } else {
+          result += ',' + chkItemArray[i].value;
+        }
+
+      }
+    }
+    return result;
+  }
+</script>
+{% endblock %}
+<!--End 页面主要内容-->

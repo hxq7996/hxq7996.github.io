@@ -1,0 +1,259 @@
+{% extends 'common.html' %}
+
+<!--页面主要内容-->
+{% block container %}
+<script src="static/js/clipboard.min.js"></script>
+<script src="static/js/index.js"></script>
+<link href="static/css/index.css" rel="stylesheet">
+
+
+<div>
+  <main class="lyear-layout-content">
+
+    <div class="container-fluid">
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card">
+            <div class="card-toolbar clearfix">
+              <div class="pull-right search-bar" method="get" action="#!" role="form">
+                <div class="input-group" class="pull-right search-bar" style="display: none;">
+                  <input type="text" v-model="name" class="form-control" value="" name="keyword"
+                    placeholder="搜索+回车enter" @keyup.enter="search()">
+                </div>
+              </div>
+              <div class="toolbar-btn-action">
+                <a v-if="shenflag" class="btn btn-primary m-r-5" href="#!" data-toggle="modal"
+                  data-target="#exampleModal" data-whatever="@mdo" @click="add"><i class="mdi mdi-plus"></i> 新增</a>
+                <!-- <a class="btn btn-success m-r-5" href="#!"><i class="mdi mdi-check"></i> 启用</a>
+                <a class="btn btn-warning m-r-5" href="#!"><i class="mdi mdi-block-helper"></i> 禁用</a>
+                <a class="btn btn-danger del_data" href="#!" @click="open"><i class="mdi mdi-window-close"></i> 删除</a> -->
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                  <thead>
+                    <tr>
+                      <th>编号</th>
+                      <th>用户名</th>
+                      <th>权限</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item,index) in page">
+
+                      <td>{{((p_page-1)*p_size)+index+1}}</td>
+                      <td>{{item.username}}</td>
+                      <td v-if="item.shenf1.length>0">
+                        <font class="text-primary">用户</font>
+                      </td>
+                      <td v-else-if="item.shenf1.length===0 && item.shenf.length===0  ">
+                        <font class="text-danger">系统管理员</font>
+                      </td>
+                      <td v-else>
+                        <font class="text-info">管理员</font>
+                      </td>
+                      <td>
+                        <div class="btn-group">
+                          <a class="btn btn-xs btn-default" href="#!" title="编辑" data-toggle="tooltip"
+                            @click="edit(index,item)"><i class="mdi mdi-pencil"></i></a>
+                          <a v-show="shenflag" v-if="item.shenf1.length>0" class="btn btn-xs btn-default" href="#!"
+                            title="删除" @click="open(item.id)" class="btn btn-primary" data-toggle="modal"
+                            data-target=".bs-example-modal-sm"><i class="mdi mdi-window-close"></i></a>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="block" style="display: none;">
+                <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
+                  :current-page.sync="p_page" :page-sizes="p_sizes" :page-size="p_size"
+                  layout="sizes, prev, pager, next" :total="p_total">
+                </el-pagination>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+  <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    v-show="dialogVisbile">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+              aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="exampleModalLabel">用户管理</h4>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="display: none;">
+            <input type="text" v-model="data_form.id" class="form-control" name="id" placeholder="ID号" required>
+          </div>
+          <div class="form-group">
+            <input type="text" class="form-control" name="url_1" placeholder="用户名" required
+              v-model="data_form.username">
+          </div>
+          <div class="form-group">
+            <input type="password" class="form-control" name="url_2" placeholder="密码" required
+              v-model="data_form.password">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-primary" @click="save_data">提交</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  new Vue({
+    el: '#app',
+    data: {
+      visible: false,
+      menuV:false,
+      page: {}, //页面数据
+      p_page: 1, //当前页
+      p_sizes: [10, 100, 200], //页面尺寸选择
+      p_size: 200, //页面尺寸
+      p_total: 200, //数据总条数
+      name: '', //查询参数
+      dialogVisbile: false, //弹出层状态
+      data_form: { id: '', username: '', password: '', shenf1: '', shenf: '', isadmin: '2' }, //表单数据
+      shenflag: true,   //识别用户特征
+    },
+    mounted() {
+      this.loadTable(this.p_page, this.p_size, this.name)
+      this.loadmenu()
+    },
+    methods: {
+      loadmenu(){
+        axios({
+          method: 'post',
+          url: baseUrl + '/menuV',
+        })
+          .then((res) => {
+            this.menuV = res.data.menuV;
+          })
+      },
+      loadTable(pnum, psize, pname) {
+        axios({
+          method: 'post',
+          url: baseUrl + '/yonghu',
+          data: {
+            pnum: pnum,
+            psize: psize,
+            pname: pname
+          },
+        })
+          .then((res) => {
+            this.page = res.data.list;
+            this.p_total = res.data.total;
+            this.shenflag = res.data.shenflag;
+          })
+      },
+      loadTable_update(row, act) {
+        axios({
+          method: 'post',
+          url: baseUrl + '/yonghu',
+          data: {
+            row: row,
+            act: act,
+          },
+        })
+          .then((res) => {
+            this.loadTable(this.p_page, this.p_size, this.name)
+            console.log(res.data);
+            if (res.data>0) {
+              this.$message({
+              type: 'success',
+              message: '操作成功!'
+              });
+            }
+            else
+            {this.$message('数据冲突,操作失败');}
+          })
+      },
+      search() {
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+      add() {
+        this.data_form = { id: '', username: '', password: '', shenf1: '' }
+        //document.getElementById("mysel").disabled = false;
+      },
+      edit(index, row) {
+        this.data_form.id = row['id']
+        this.data_form.username = row['username']
+        this.data_form.password = row['password']
+        $('#exampleModal').modal('show');
+      },
+      del(del_id) {
+        this.data_form = { id: del_id, username: '', password: '', shenf1: '1' }
+        this.loadTable_update(this.data_form, 'del');
+      },
+      open(ID) {
+        this.$confirm('此操作将永久删除, 是否继续?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          var cbox = getChkItemId("ids")
+          console.log(cbox)
+          if (typeof ID !== 'object' || cbox.length > 0) {
+            if (cbox.length > 0) { this.del(cbox) }
+            else { this.del(ID) }
+            getChkItemId("ids", 1)
+          }
+        })
+      },
+      save_data() {
+        //if (this.data_form.id === '') {console.log(this.data_form.id);}
+        if (this.data_form.id === undefined || this.data_form.id === '') {
+          if (this.data_form.username.length > 0 && this.data_form.password.length > 0) { this.loadTable_update(this.data_form, 'add'); }
+        }
+        else {
+          this.loadTable_update(this.data_form, 'edit');
+        }
+        $('#exampleModal').modal('hide');
+      },
+      handleSizeChange(val) {
+        this.p_size = val;
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+      handleCurrentChange(val) {
+        this.p_page = val;
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+    },
+  })
+
+  //点击复制
+  var clipboard = new ClipboardJS('.cpbtn');
+
+  function getChkItemId(chkItem, addcs) {
+    var chkItemArray = document.getElementsByName(chkItem);
+    var result = '';
+    for (var i = 0; i < chkItemArray.length; i++) {
+      if (addcs === 1) { chkItemArray[i].checked = false; }
+      if (chkItemArray[i].checked) {
+        if (result == '') {
+          result += chkItemArray[i].value;
+        } else {
+          result += ',' + chkItemArray[i].value;
+        }
+
+      }
+    }
+    return result;
+  }
+</script>
+{% endblock %}
+<!--End 页面主要内容-->

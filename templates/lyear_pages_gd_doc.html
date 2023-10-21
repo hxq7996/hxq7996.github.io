@@ -1,0 +1,299 @@
+{% extends 'common.html' %}
+
+<!--页面主要内容-->
+{% block container %}
+<script src="static/js/clipboard.min.js"></script>
+<script src="static/js/index.js"></script>
+<link href="static/css/index.css" rel="stylesheet">
+
+
+<div>
+  <main class="lyear-layout-content">
+
+    <div class="container-fluid">
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card">
+            <div class="card-toolbar clearfix">
+              <div class="pull-right search-bar" method="get" action="#!" role="form">
+                <div class="input-group" class="pull-right search-bar">
+                  <input type="text" v-model="name" class="form-control" value="" name="keyword"
+                    placeholder="搜索+回车enter" @keyup.enter="search()">
+                </div>
+              </div>
+              <div class="toolbar-btn-action">
+                <a class="btn btn-primary m-r-5" href="#!" data-toggle="modal" data-target="#exampleModal"
+                  data-whatever="@mdo" @click="add"><i class="mdi mdi-plus"></i> 新增</a>
+                <a class="btn btn-success m-r-5" href="#!" @click="qiyong"><i class="mdi mdi-check"></i> 状态</a>
+                
+                <a class="btn btn-danger del_data" href="#!" @click="open"><i class="mdi mdi-window-close"></i> 删除</a>
+              </div>
+            </div>
+            <div class="card-body">
+
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                  <thead>
+                    <tr>
+                      <th>
+                        <label class="lyear-checkbox checkbox-primary">
+                          <input type="checkbox" id="check-all"><span></span>
+                        </label>
+                      </th>
+                      <th>编号</th>
+                      <th>URL</th>
+                      <th>人员</th>
+                      <th>工单名</th>
+                      <th>号码</th>
+                      <th>次数</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item,index) in page">
+                      <td>
+                        <label class="lyear-checkbox checkbox-primary">
+                          <input type="checkbox" name="ids" :value="item.id"><span></span>
+                        </label>
+                      </td>
+                      <td>{{((p_page-1)*p_size)+index+1}}</td>
+                      <td>{{'/GD/'+item.url}}</td>
+                      <td>{{item.username}}</td>
+                      <td>{{item.name}}</td>
+                      <td>{{item.gd_num}}</td>
+                      <td>{{item.gd_click}}</td>
+                      <td v-if="item.gd_flag=='0'"><font  class="text-danger">关闭</font></td>
+                      <td  v-else><font  class="text-success">正常</font></td>
+                      <td>
+                        <div class="btn-group">
+                          <a class="btn btn-xs btn-default" href="#!" title="编辑" data-toggle="tooltip"
+                            @click="edit(index,item)"><i class="mdi mdi-pencil"></i></a>
+                          <a class="btn btn-xs btn-default" href="#!" title="删除" @click="open(item.id)"
+                            class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-sm"><i
+                              class="mdi mdi-window-close"></i></a>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="block">
+                <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
+                  :current-page.sync="p_page" :page-sizes="p_sizes" :page-size="p_size"
+                  layout="sizes, prev, pager, next" :total="p_total">
+                </el-pagination>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+  <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    v-show="dialogVisbile">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+              aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="exampleModalLabel">工单管理</h4>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <select class="form-control" name="to_url" size="1" v-model="data_form.alink_id">
+              <option  value="0">请选择</option>
+              <option  v-for="(item,index) in page2" :value="item.id">{{'/GD/'+item.url}}</option>
+            </select>
+          </div>
+          <div class="form-group" style="display: none;">
+            <input type="text" v-model="data_form.id" class="form-control" name="id" placeholder="ID号" required>
+          </div>
+          <div class="form-group">
+            <input type="text" class="form-control" name="url_1" placeholder="工单名" required
+              v-model="data_form.name">
+          </div>
+          <div class="form-group">
+            <textarea class="form-control" name="url_2" placeholder="工单号,请分行填写;若填写http链接(落地页),则优先执行" required
+              v-model="data_form.gd_num" rows="10"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-primary" @click="save_data">提交</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  new Vue({
+    el: '#app',
+    data: {
+      visible: false,
+      menuV:false,
+      page: {}, //页面数据
+      page2: {}, //页面数据2
+      p_page: 1, //当前页
+      p_sizes: [10, 100, 200], //页面尺寸选择
+      p_size: 10, //页面尺寸
+      p_total: 0, //数据总条数
+      name: '', //查询参数
+      dialogVisbile: false, //弹出层状态
+      data_form: { id: '', alink_id: '', name: '', gd_num: '' }, //表单数据
+      test: 111, //测试数据
+    },
+    mounted() {
+      
+      this.loadTable(this.p_page, this.p_size, this.name)
+      this.loadmenu()
+    },
+    methods: {
+      loadmenu(){
+        axios({
+          method: 'post',
+          url: baseUrl + '/menuV',
+        })
+          .then((res) => {
+            this.menuV = res.data.menuV;
+          })
+      },
+      loadTable(pnum, psize, pname) {
+        axios({
+          method: 'post',
+          url: baseUrl + '/blink',
+          data: {
+            pnum: pnum,
+            psize: psize,
+            pname: pname
+          },
+        })
+          .then((res) => {
+            this.page = res.data.list;
+            this.p_total = res.data.total;
+          })
+      },
+      loadTable_update(row, act) {
+        axios({
+          method: 'post',
+          url: baseUrl + '/blink',
+          data: {
+            row: row,
+            act: act,
+          },
+        })
+          .then((res) => {
+            this.loadTable(this.p_page, this.p_size, this.name)
+            if (res.data>0) {
+              this.$message({
+              type: 'success',
+              message: '操作成功!'
+              });
+            }
+            else
+            {this.$message('数据冲突,操作失败');}
+          })
+      },
+      loadTable_alink() {
+        axios({
+          method: 'post',
+          url: baseUrl + '/alink',
+          data: {
+            pnum: '1',
+            psize: '1000',
+            pname: ''
+          },
+        })
+          .then((res) => {
+            this.page2 = res.data.list;
+          })
+      },
+      search() {
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+      add() {
+        this.data_form = { alink_id: '0', name: '', gd_num: '' }
+        this.loadTable_alink()
+      },
+      edit(index, row) {
+        this.loadTable_alink()
+        this.data_form.id = row['id']
+        this.data_form.alink_id = row['alink_id']
+        this.data_form.name = row['name']
+        this.data_form.gd_num = row['gd_num']
+        $('#exampleModal').modal('show');
+      },
+      del(del_id) {
+        this.data_form = { id: del_id, alink_id: '', name: '', gd_num: '' }
+        this.loadTable_update(this.data_form, 'del');
+      },
+      qiyong() {
+        var cbox=getChkItemId("ids")
+        this.data_form = { id: cbox, alink_id: '', name: '', gd_num: '' }
+        this.loadTable_update(this.data_form, 'flag');
+      },
+      open(ID) {
+        this.$confirm('此操作将永久删除, 是否继续?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          var cbox=getChkItemId("ids")
+          console.log(cbox)
+          if (typeof ID !== 'object' || cbox.length>0){
+            if(cbox.length>0)
+            {this.del(cbox)}
+            else{this.del(ID)}
+          getChkItemId("ids",1)
+          }
+        })
+      },
+      save_data() {
+        if (this.data_form.id === undefined || this.data_form.id === '') {
+          if(this.data_form.name.length>0 && this.data_form.gd_num.length>0 && this.data_form.alink_id>0)
+          {this.loadTable_update(this.data_form, 'add');}
+        }
+        else {
+          if(this.data_form.name.length>0 && this.data_form.gd_num.length>0 && this.data_form.alink_id>0)
+          {this.loadTable_update(this.data_form, 'edit');}
+        }
+        $('#exampleModal').modal('hide');
+      },
+      handleSizeChange(val) {
+        this.p_size = val;
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+      handleCurrentChange(val) {
+        this.p_page = val;
+        this.loadTable(this.p_page, this.p_size, this.name)
+      },
+    },
+  })
+
+  //点击复制
+  var clipboard = new ClipboardJS('.cpbtn');
+
+  function getChkItemId(chkItem,addcs) {
+    var chkItemArray = document.getElementsByName(chkItem);
+    var result = '';
+    for (var i = 0; i < chkItemArray.length; i++) {
+      if(addcs===1){chkItemArray[i].checked = false;}
+      if (chkItemArray[i].checked) {
+        if (result == '') {
+          result += chkItemArray[i].value;
+        } else {
+          result += ',' + chkItemArray[i].value;
+        }
+        
+      }
+    }
+    return result;
+  }
+</script>
+{% endblock %}
+<!--End 页面主要内容-->
