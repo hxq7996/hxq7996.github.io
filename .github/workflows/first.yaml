@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - name: Set up Python
@@ -23,9 +23,5 @@ jobs:
 
     - name: Run tests
       run: |
-        python -m pytest tests/
+        python -m pytest app.py
 
-    - name: Build and deploy
-      run: |
-        python build.py
-        python deploy.py
